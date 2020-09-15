@@ -1,0 +1,39 @@
+digraph g {
+	graph [compound=false fontsize=60 nodesep=0.15 rankdir=LR ranksep=0.4 splines=line style=bold]
+	s [label=S shape=box]
+	x [label=X shape=box]
+	s -> x [label=A]
+	z [label=Z shape=box]
+	x -> z [label=P]
+	z -> y [label=W]
+	subgraph ys {
+		color=black label="data fitting" style=bold
+		y [label=y color=green shape=circle]
+		label="data fitting"
+		y -> n0
+		y -> n1
+		y -> n2 [color=white]
+		y -> n3 [color=white]
+		y -> n4 [color=white]
+		y -> n5
+		y -> n6
+		n0 -> f
+		n1 -> f
+		n2 -> f [color=white]
+		n3 -> f [color=white]
+		n4 -> f [color=white]
+		n5 -> f
+		n6 -> f
+		subgraph ns {
+			color=black label="hidden layer" style=bold
+			n0 [color=orange fontcolor=white shape=circle]
+			n1 [color=orange fontcolor=white shape=circle]
+			n2 [color=black shape=point style=solid]
+			n3 [color=black shape=point style=solid]
+			n4 [color=black shape=point style=solid]
+			n5 [color=orange fontcolor=white shape=circle]
+			n6 [color=orange fontcolor=white shape=circle]
+			f [label=f color=red shape=circle]
+		}
+	}
+}

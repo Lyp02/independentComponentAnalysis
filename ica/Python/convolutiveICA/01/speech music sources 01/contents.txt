@@ -1,0 +1,5 @@
+Sources are the estimated sources in original Te-Won Lee's demo(https://cnl.salk.edu/~tewon/Blind/blind_audio.html).
+For the sake of memory limit,the sources are sampled to the size of 8000.
+s1:speaker says the digit from one to ten in english.
+s2:loud music in the background.
+s3:speaker says the digit from one to ten in spanish.

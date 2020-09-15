@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Aug 19 05:10:01 2020
+
+@author: lyp
+"""
+import numpy as np
+import matplotlib.pyplot as plt
+class ProDenICA:
+    def __init__(self):
+        self.A =None
+        self.s =None
+    def orth(self,A):
+        u,d,vh =np.linalg.svd(A)
+        return u@vh
+    def centering(self,X):
+        Xc =X.copy()
+        Xc =Xc-np.mean(Xc,axis=0)
+        return Xc
+    def whitening(self,X):
+        cov =(X.T@X)/X.shape[0]
+        u,d,vh =np.linalg.svd(cov)
+        whiten_matrix =np.diag(1.0/np.sqrt(d))@np.linalg.inv(u)
+        X =(whiten_matrix@X.T).T
+        return [whiten_matrix,X]
+    def amari(self,A0,A):
+        p =A.shape[1]
+        r =A0@np.linalg.inv(A)
+        r_abs =np.abs(r)
+        row_abssum =np.sum(r_abs,axis=1)
+        row_absmax =np.max(r_abs,axis=1)
+        col_abssum =np.sum(r_abs,axis=0)
+        col_absmax =np.sum(r_abs,axis=0)
+        val =1.0/(2*p)*(np.sum((row_abssum/row_absmax)-1.0)+np.sum((col_abssum/col_absmax)-1.0))
+        return val
+        
+    def fit(self,X,df,tol=1e-4):
+        [N,p]=X.shape
+        
