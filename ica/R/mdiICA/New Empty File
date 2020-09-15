@@ -1,0 +1,48 @@
+library(ProDenICA)
+source("./R/ICA/Gmdi.R")
+source("./R/ICA/Gridge.R")
+p<-2
+N<-1024
+k<-18
+m<-30
+n<-3
+dists<-c("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r")
+amaris<-array(0,dim=c(n,k,m))
+for (i in 1:k){
+  for (j in 1:m){
+   dist =dists[i]
+   A0<-mixmat(p)
+   s<-scale(cbind(rjordan(dist,N),rjordan(dist,N)))
+   x <- s %*% A0
+   ###Whiten the data
+   x <- scale(x, TRUE, FALSE)
+   sx <- svd(x)	### orthogonalization function
+   x <- sqrt(N) * sx$u
+   target <- solve(A0)
+   target <- diag(sx$d) %*% t(sx$v) %*% target/sqrt(N)
+   W0 <- matrix(rnorm(2*2), 2, 2)
+   W0 <- ICAorthW(W0)
+   W1 <- ProDenICA(x, W0=W0,trace=TRUE,Gfunc=G1)$W
+   Pos.fit=ProDenICA(x, W0=W0,Gfunc=GPois,trace=TRUE, density=TRUE)
+   W2 <- Pos.fit$W
+   rde.fit=ProDenICA(x, W0=W0,Gfunc=Gridge,trace=TRUE, density=TRUE)
+   W3 <- rde.fit$W
+   #distance of FastICA from target
+   amaris[1,i,j]<-amari(W1,target)
+   #distance of ProDenICA from target
+   amaris[2,i,j]<-amari(W2,target)
+   #distancee of mdiICA from target
+   amaris[3,i,j]<-amari(W3,target)
+ }
+}
+amaris.mean =apply(amaris,c(1,2),mean)
+amaris.sd   =apply(amaris,c(1,2),sd)
+
+pdf("dists2.pdf")
+plot(1:k,amaris.mean[1,],type="b",lty=1,pch=1,col="red",xaxt="n",xlab="Distribution",ylab="Amari Distance from True W")
+lines(1:k,amaris.mean[2,],type="b",lty=1,,pch=1,col="blue")
+lines(1:k,amaris.mean[3,],type="b",lty=1,,pch=1,col="green")
+axis(1, at = 1:k, labels = letters[1:18])
+legend("topleft", inset=.05,lty=c(1,1,1),lwd=c(2,2,2),legend=c("FastICA","ProDenICA","RdeICA"),pch=c(1,1,1),
+ col=c("red", "blue","green"))
+dev.off()

@@ -1,0 +1,166 @@
+library(ProDenICA)
+source("./R/ICA/Gmdi.R")
+p<-2
+N<-1024
+k<-18
+m<-30
+n<-3
+maxit=20
+dists<-c("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r")
+amaris<-array(0,dim=c(n,k,m))
+
+for (i in 1:k){
+  for (j in 1:m){
+   dist =dists[i]
+   A0<-mixmat(p)
+   s<-scale(cbind(rjordan(dist,N),rjordan(dist,N)))
+   x <- s %*% A0
+   ###Whiten the data
+   x <- scale(x, TRUE, FALSE)
+   sx <- svd(x)	### orthogonalization function
+   x <- sqrt(N) * sx$u
+   target <- solve(A0)
+   target <- diag(sx$d) %*% t(sx$v) %*% target/sqrt(N)
+   W0 <- matrix(rnorm(2*2), 2, 2)
+   W0 <- ICAorthW(W0)
+   G1.fit <- ProDenICA(x, W0=W0,trace=TRUE,Gfunc=G1,maxit=maxit)
+   W1<-G1.fit$W
+   Pos.fit=ProDenICA(x, W0=W0,Gfunc=GPois,trace=TRUE, density=TRUE,maxit=maxit)
+   W2 <- Pos.fit$W
+   mdi.fit=ProDenICA(x, W0=W0,Gfunc=Gmdi,trace=TRUE, density=TRUE,maxit=maxit)
+   W3 <- mdi.fit$W
+   #distance of FastICA from target
+   amaris[1,i,j]<-amari(W1,target)
+   #distance of ProDenICA from target
+   amaris[2,i,j]<-amari(W2,target)
+   #distancee of mdiICA from target
+   amaris[3,i,j]<-amari(W3,target)
+   
+ }
+}
+amaris.mean =apply(amaris,c(1,2),mean)
+amaris.sd   =apply(amaris,c(1,2),sd)
+
+
+
+pdf("2dimComparison.pdf")
+plot(1:k,amaris.mean[1,],type="b",lty=1,pch=1,col="red",xaxt="n",xlab="Distribution",ylab="Amari Distance from True W")
+lines(1:k,amaris.mean[2,],type="b",lty=1,,pch=1,col="blue")
+lines(1:k,amaris.mean[3,],type="b",lty=1,,pch=1,col="green")
+axis(1, at = 1:k, labels = letters[1:18])
+legend("topleft", inset=.05,lty=c(1,1,1),lwd=c(2,2,2),legend=c("FastICA","ProDenICA","proposed algorithm"),pch=c(1,1,1),
+ col=c("red", "blue","green"))
+
+dev.off()
+
+
+
+m=300
+p=4
+amaris2<-array(0,dim=c(n,m))
+for (i in 1:m){
+ dist =sample(dists,p)
+ A0<-mixmat(p)
+ s<-scale(cbind(rjordan(dist[1],N),rjordan(dist[2],N),rjordan(dist[3],N),rjordan(dist[4],N)))
+ x <- s %*% A0
+ ###Whiten the data
+ x <- scale(x, TRUE, FALSE)
+ sx <- svd(x)	### orthogonalization function
+ x <- sqrt(N) * sx$u
+ target <- solve(A0)
+ target <- diag(sx$d) %*% t(sx$v) %*% target/sqrt(N)
+ W0 <- matrix(rnorm(p*p), p, p)
+ W0 <- ICAorthW(W0)
+ W1 <- ProDenICA(x, W0=W0,trace=TRUE,Gfunc=G1)$W
+ Pos.fit=ProDenICA(x, W0=W0,Gfunc=GPois,trace=TRUE, density=TRUE)
+ W2 <- Pos.fit$W
+ mdi.fit=ProDenICA(x, W0=W0,Gfunc=Gmdi,trace=TRUE, density=TRUE)
+ W3 <- mdi.fit$W
+ #distance of FastICA from target
+ amaris2[1,i]<-amari(W1,target)
+ #distance of ProDenICA from target
+ amaris2[2,i]<-amari(W2,target)
+ #distancee of mdiICA from target
+ amaris2[3,i]<-amari(W3,target) 
+}
+cl<-c(rep("FastICA",m),rep("ProDenICA",m),rep("proposed algorithm",m))
+am<-c(amaris2[1,],amaris2[2,],amaris2[3,])
+cmp<-data.frame(id=cl,val=am)
+pdf("4dimComparison.pdf")
+boxplot(val ~ id, data=cmp,xlab=NULL,
+ylab="Amari Distance from True W")
+dev.off()
+
+thetas<-seq(from=0,to=pi,length.out=30)
+w<-array(0,dim=c(2,1))
+contrast<-array(0,dim=c(2,4,30))
+choices<-c("c","m")
+targets<-array(0,dim=c(2,2,2))
+p=2
+angles =array(0,dim=c(2,2))
+for (i in 1:2){
+  dist <-choices[i]
+  A0<-mixmat(p)
+  s<-scale(cbind(rjordan(dist,N),rjordan(dist,N)))
+
+  A0[1,1]<-cos(pi/4)
+  A0[2,1]<-sin(pi/4)
+  A0[1,2]<-(-1.0*sin(pi/4))
+  A0[2,2]<-cos(pi/4)
+  print("A0")
+  print(A0)
+  x <- s %*% A0
+  ###Whiten the data
+  x <- scale(x, TRUE, FALSE)
+  sx <- svd(x)	### orthogonalization function
+  x <- sqrt(N) * sx$u
+  target <- solve(A0)
+  target <- diag(sx$d) %*% t(sx$v) %*% target/sqrt(N)
+  targets[i,,]<-target
+  angles[i,1]-atan(abs(target[2,1]/target[1,1]))
+  angles[i,2]<-atan(abs(target[2,2]/target[1,2]))
+  for (j in 1:30){
+     w[1,1]<-cos(thetas[j])
+     w[2,1]<-sin(thetas[j])
+     s<-x%*%w
+     xnorm<-rnorm(1000000)
+     contrast[i,1,j]<-(mean(G0(s)$Gs)-mean(G0(xnorm)$Gs))^2 
+     contrast[i,2,j]<-(mean(G1(s)$Gs)-mean(G1(xnorm)$Gs))^2
+     contrast[i,3,j]<-mean(GPois(s)$Gs)
+     contrast[i,4,j]<-(mean((Gmdi(s)$Gs)))
+  }
+     contrast[i,1,]<-(contrast[i,1,]/max(contrast[i,1,])) 
+     contrast[i,2,]<-(contrast[i,2,]/max(contrast[i,2,]))
+     contrast[i,3,]<-(contrast[i,3,]/max(contrast[i,3,]))
+     contrast[i,4,]<-(contrast[i,4,]/max(contrast[i,4,]))
+
+}
+
+pdf("methodsCompareUniforms.pdf")
+plot(thetas,contrast[1,1,],type="b",pch=15,lty=1,lwd=1,col="red",main="Sources:Uniforms",
+xlab=expression(theta),ylab="Index",ylim=c(0,1.0))
+lines(thetas,contrast[1,2,],type="b",pch=16,lty=1,lwd=1,col="orange")
+lines(thetas,contrast[1,3,],type="b",pch=17,lty=1,lwd=1,col="blue")
+lines(thetas,contrast[1,4,],type="b",pch=18,lty=1,lwd=1,col="green")
+abline(v=c(pi/4,3*pi/4),lwd=1,lty=1,col="gray")
+legend("bottomright", inset=.05,pch=c(15,16,17,18),lty=c(1,1,1,1),lwd=c(1,1,1,1),legend=c("FastICA G1","FastICA G2","ProDenICA","proposed algorithm"),
+ col=c("red","orange","blue","green"))
+dev.off()
+pdf("methodsCompareGaussMix.pdf")
+plot(thetas,contrast[2,1,],type="b",pch=15,lty=1,lwd=1,col="red",main="Sources:Gaussian Mixtures",
+xlab=expression(theta),ylab="Index",ylim=c(0,1.0))
+lines(thetas,contrast[2,2,],type="b",pch=16,lty=1,lwd=1,col="orange")
+lines(thetas,contrast[2,3,],type="b",pch=17,lty=1,lwd=1,col="blue")
+lines(thetas,contrast[2,4,],type="b",pch=18,lty=1,lwd=1,col="green")
+abline(v=c(pi/4,3*pi/4),lwd=1,lty=1,col="gray")
+legend("bottomright", inset=.05,lty=c(1,1,1,1),pch=c(15,16,17,18),lwd=c(1,1,1,1),legend=c("FastICA G1","FastICA G2","ProDenICA","proposed algorithm"),
+ col=c("red","orange","blue","green"))
+
+dev.off()
+
+
+
+
+
+
+

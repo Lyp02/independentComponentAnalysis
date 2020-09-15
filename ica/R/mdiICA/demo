@@ -1,0 +1,36 @@
+library(ProDenICA)
+library(CVXR)
+source("./R/ICA/Gmle.R")
+source("./R/ICA/Gmle2.R")
+source("./R/ICA/gauss_kernel.R")
+source("./R/ICA/poly_kernel.R")
+p<-2
+N<-1024
+k<-18
+m<-30
+n<-3
+maxit=20
+dists<-c("a","b","c","d","e","f","g","h","i","j","k","l","m","n","o","p","q","r")
+amaris<-array(0,dim=c(n,k,m))
+
+dist =dists[0]
+A0<-mixmat(p)
+s<-scale(cbind(rjordan(dist,N),rjordan(dist,N)))
+x <- s %*% A0
+###Whiten the data
+x <- scale(x, TRUE, FALSE)
+sx <- svd(x)	### orthogonalization function
+x <- sqrt(N) * sx$u
+target <- solve(A0)
+target <- diag(sx$d) %*% t(sx$v) %*% target/sqrt(N)
+W0 <- matrix(rnorm(2*2), 2, 2)
+W0 <- ICAorthW(W0)
+G1.fit <- ProDenICA(x, W0=W0,trace=TRUE,Gfunc=G1,maxit=maxit)
+W1<-G1.fit$W
+Pos.fit=ProDenICA(x, W0=W0,Gfunc=GPois,trace=TRUE, density=TRUE,maxit=maxit)
+W2 <- Pos.fit$W
+mle.fit=ProDenICA(x, W0=W0,Gfunc=Gmle2,trace=TRUE, density=TRUE,maxit=maxit)
+W3<-mle.fit$W
+print(paste('G1 ',amari(W1,target)))
+print(paste('GPois ',amari(W2,target)))
+print(paste('Gmle ',amari(W3,target)))
